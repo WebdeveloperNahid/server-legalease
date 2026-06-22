@@ -37,6 +37,46 @@ async function run() {
     const database = client.db("legalease");
     const addNewLawyerCollection = database.collection("newLawyers");
 
+    app.get("/api/public/lawyers", async (req, res) => {
+      try {
+        const { search, specialty, availability } = req.query;
+        let query = {};
+
+        if (search) {
+          query.name = { $regex: search, $options: "i" };
+        }
+
+        if (specialty) {
+          query.specialty = specialty;
+        }
+
+        if (availability) {
+          query.status = availability;
+        }
+
+        const result = await addNewLawyerCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
+    //  সিঙ্গেল লয়ারের প্রোফাইল ডিটেইলস পাওয়ার API
+    app.get("/api/public/lawyer/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+        const result = await addNewLawyerCollection.findOne({
+          _id: new ObjectId(id),
+        });
+        if (!result) {
+          return res.status(404).send({ message: "Lawyer not found" });
+        }
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
     app.get("/api/my/addLawyers", async (req, res) => {
       const query = {};
       if (req.query.lawyerId) {
@@ -54,33 +94,28 @@ async function run() {
 
     //update prfile er jonno
 
-    app.patch("/api/lawyers/:id", async (req, res) => {
-     
-        const { id } = req.params;
-        const updateData = req.body;
+    app.patch("/api/addLawyers/:id", async (req, res) => {
+      const { id } = req.params;
+      const updateData = req.body;
 
-       
-        delete updateData._id;
+      delete updateData._id;
 
-        const result = await addNewLawyerCollection.updateOne(
-          { _id: new ObjectId(id) },
-          { $set: { ...updateData, updatedAt: new Date() } },
-        );
+      const result = await addNewLawyerCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { ...updateData, updatedAt: new Date() } },
+      );
 
-        res.send(result)
-     
+      res.send(result);
     });
 
+    app.delete("/api/addLawyers/:id", async (req, res) => {
+      const { id } = req.params;
 
-    app.delete("/api/lawyers/:id", async (req, res) => {
-     
-        const { id } = req.params;
+      const result = await addNewLawyerCollection.deleteOne({
+        _id: new ObjectId(id),
+      });
 
-        const result = await addNewLawyerCollection.deleteOne({
-          _id: new ObjectId(id),
-        });
-
-        res.send(result)
+      res.send(result);
     });
 
     await client.db("admin").command({ ping: 1 });
