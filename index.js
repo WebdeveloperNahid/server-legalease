@@ -8,7 +8,7 @@ require("dotenv").config();
 app.use(cors());
 app.use(express.json());
 
-const { MongoClient, ServerApiVersion } = require("mongodb");
+const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 
 app.get("/", (req, res) => {
   res.send("Hello World!");
@@ -52,25 +52,36 @@ async function run() {
       res.send(result);
     });
 
-    // app.post("/api/addLawyers", async (req, res) => {
-    //   try {
-    //     const addLawyer = req.body;
-    //     const result = await addNewLawyerCollection.insertOne(addLawyer);
+    //update prfile er jonno
 
-    //     // 💡 এখানে ট্রিক! মঙ্গোডিবির জটিল ObjectId-কে প্লেইন স্ট্রিং বানিয়ে দিচ্ছি
-    //     if (result && result.insertedId) {
-    //       return res.status(201).json({
-    //         acknowledged: result.acknowledged,
-    //         insertedId: result.insertedId.toString(), // প্লেইন স্ট্রিং করা হলো
-    //       });
-    //     }
+    app.patch("/api/lawyers/:id", async (req, res) => {
+     
+        const { id } = req.params;
+        const updateData = req.body;
 
-    //     res.status(400).json({ success: false, message: "Failed to insert" });
-    //   } catch (error) {
-    //     console.error("Error inserting lawyer:", error);
-    //     res.status(500).json({ error: error.message });
-    //   }
-    // });
+       
+        delete updateData._id;
+
+        const result = await addNewLawyerCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { ...updateData, updatedAt: new Date() } },
+        );
+
+        res.send(result)
+     
+    });
+
+
+    app.delete("/api/lawyers/:id", async (req, res) => {
+     
+        const { id } = req.params;
+
+        const result = await addNewLawyerCollection.deleteOne({
+          _id: new ObjectId(id),
+        });
+
+        res.send(result)
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
