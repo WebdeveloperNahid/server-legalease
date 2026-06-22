@@ -37,6 +37,38 @@ async function run() {
     const database = client.db("legalease");
     const addNewLawyerCollection = database.collection("newLawyers");
 
+    //for Home page to show 6 data use--> by fee (b-a) & limite (6) a
+    app.get("/api/public/featured-lawyers", async (req, res) => {
+      try {
+        const topLawyers = await addNewLawyerCollection
+          .find({})
+          .sort({ _id: -1 })
+          .limit(6)
+          .toArray();
+
+        res.status(200).json(topLawyers);
+      } catch (error) {
+        console.error("Error fetching top experts in backend:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    });
+
+    // 🚀 Extra Section 1 – "Top Legal Experts" (Display 3 lawyers)
+    app.get("/api/public/top-experts", async (req, res) => {
+      try {
+        const topLawyers = await addNewLawyerCollection
+          .find({})
+          .sort({ fee: -1 }) 
+          .limit(3) 
+          .toArray();
+
+        res.status(200).json(topLawyers);
+      } catch (error) {
+        console.error("Error fetching top experts in backend:", error);
+        res.status(500).json({ message: "Internal Server Error" });
+      }
+    });
+
     app.get("/api/public/lawyers", async (req, res) => {
       try {
         const { search, specialty, availability } = req.query;
