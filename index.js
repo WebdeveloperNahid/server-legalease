@@ -169,7 +169,7 @@ async function run() {
     });
 
     //New collection for bakend Tripe pament system management
-    // 1️ নতুন Hiring Request তৈরি
+    // 1️⃣ নতুন Hiring Request তৈরি
     app.post("/api/hiring-requests", async (req, res) => {
       try {
         const newHiringRequest = {
@@ -183,6 +183,44 @@ async function run() {
         res.status(201).send(result);
       } catch (error) {
         res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
+    // 2️⃣ User-এর নিজের   Hiring History { getUserHiringHistory }  (/dashboard/user/hiring-history)
+    app.get("/api/hiring-requests/user/:userId", async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const result = await hiringRequestCollection
+          .find({ userId })
+          .sort({ requestDate: -1 })
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
+    // 3️⃣ একটা নির্দিষ্ট Hiring Request আনা (id দিয়ে) — pay page এর জন্য লাগবে
+    // ব্যাকএন্ড কোড:
+    app.get("/api/hiring-requests/:id", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        console.log("Searching for ID:", id);
+
+        const result = await hiringRequestCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!result) {
+          console.log("No data found for this ID");
+          return res.send(null);
+        }
+
+        res.send(result);
+      } catch (error) {
+        console.error("DB Error:", error);
+        res.status(500).send({ message: "Server error" });
       }
     });
 
