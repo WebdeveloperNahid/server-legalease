@@ -36,6 +36,7 @@ async function run() {
     //DataCollection-Creating.....
     const database = client.db("legalease");
     const addNewLawyerCollection = database.collection("newLawyers");
+    const hiringRequestCollection = database.collection("hiringRequests");
 
     //for Home page to show 6 data use--> by fee (b-a) & limite (6) a
     app.get("/api/public/featured-lawyers", async (req, res) => {
@@ -58,8 +59,8 @@ async function run() {
       try {
         const topLawyers = await addNewLawyerCollection
           .find({})
-          .sort({ fee: -1 }) 
-          .limit(3) 
+          .sort({ fee: -1 })
+          .limit(3)
           .toArray();
 
         res.status(200).json(topLawyers);
@@ -79,11 +80,11 @@ async function run() {
         }
 
         if (specialty) {
-          query.specialty = specialty;
+          query.specialization = { $regex: `^${specialty}$`, $options: "i" };
         }
 
         if (availability) {
-          query.status = availability;
+          query.availability = { $regex: `^${availability}$`, $options: "i" };
         }
 
         const result = await addNewLawyerCollection.find(query).toArray();
@@ -119,9 +120,26 @@ async function run() {
     });
 
     app.post("/api/addLawyers", async (req, res) => {
-      const addLawyer = req.body;
-      const result = await addNewLawyerCollection.insertOne(addLawyer);
-      res.send(result);
+      try {
+        console.log("Incoming Lawyer Data:", req.body);
+
+        const addLawyer = {
+          ...req.body,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const result = await addNewLawyerCollection.insertOne(addLawyer);
+
+        res.status(200).send(result);
+      } catch (error) {
+        console.error("ADD LAWYER ERROR:", error);
+
+        res.status(500).send({
+          message: "Failed to add lawyer",
+          error: error.message,
+        });
+      }
     });
 
     //update prfile er jonno
@@ -148,6 +166,24 @@ async function run() {
       });
 
       res.send(result);
+    });
+
+    //New collection for bakend Tripe pament system management
+    // 1️ নতুন Hiring Request তৈরি
+    app.post("/api/hiring-requests", async (req, res) => {
+      try {
+        const newHiringRequest = {
+          ...req.body,
+          status: "pending",
+          requestDate: new Date(),
+        };
+
+        const result =
+          await hiringRequestCollection.insertOne(newHiringRequest);
+        res.status(201).send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
     });
 
     await client.db("admin").command({ ping: 1 });
