@@ -37,7 +37,8 @@ async function run() {
     const database = client.db("legalease");
     const addNewLawyerCollection = database.collection("newLawyers");
     const hiringRequestCollection = database.collection("hiringRequests");
-
+    const paymentCollection = database.collection("payments");
+ 
     //for Home page to show 6 data use--> by fee (b-a) & limite (6) a
     app.get("/api/public/featured-lawyers", async (req, res) => {
       try {
@@ -221,6 +222,49 @@ async function run() {
       } catch (error) {
         console.error("DB Error:", error);
         res.status(500).send({ message: "Server error" });
+      }
+    });
+
+    //Payment related Api transition id etc info post get ________----
+
+    app.post("/api/payments", async (req, res) => {
+      try {
+        const data = req.body;
+
+        // একই Stripe session দিয়ে দ্বিতীয়বার insert আটকানো (duplicate check)
+        // if (data.sessionId) {
+        //   const existing = await paymentCollection.findOne({
+        //     sessionId: data.sessionId,
+        //   });
+        //   if (existing) {
+        //     return res.status(200).send(existing);
+        //   }
+        // }
+
+        const paymentInfo = {
+          ...data,
+          createdAt: new Date(),
+        };
+        const result = await paymentCollection.insertOne(paymentInfo);
+
+        //   — hiringRequest-এর status "paid" করা  Update method use kore
+        if (data.hiringRequestId) {
+          await hiringRequestCollection.updateOne(
+            { _id: new ObjectId(data.hiringRequestId) },
+            {
+              $set: {
+                paymentStatus: "paid",
+                paidAt: data.paidAt,
+                transactionId: result.insertedId,
+              },
+            },
+          );
+        }
+
+        res.status(201).send(result);
+      } catch (error) {
+        console.error("PAYMENT SAVE ERROR:", error);
+        res.status(500).send({ message: "Server error", error: error.message });
       }
     });
 
