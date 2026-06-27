@@ -38,7 +38,8 @@ async function run() {
     const addNewLawyerCollection = database.collection("newLawyers");
     const hiringRequestCollection = database.collection("hiringRequests");
     const paymentCollection = database.collection("payments");
- 
+    const commentCollection = database.collection("comments");
+
     //for Home page to show 6 data use--> by fee (b-a) & limite (6) a
     app.get("/api/public/featured-lawyers", async (req, res) => {
       try {
@@ -267,6 +268,103 @@ async function run() {
         res.status(500).send({ message: "Server error", error: error.message });
       }
     });
+
+    // Comment section User /Client er
+
+    // 1️⃣ নতুন Comment তৈরি (Create) — hiring record check করে
+    app.post("/api/comments", async (req, res) => {
+      try {
+        const { hiringRequestId, lawyerId, userId, userName, comment } =
+          req.body;
+
+        //  Backend-এও verify করা — শুধু frontend check trust করা যাবে না
+        const hiringRequest = await hiringRequestCollection.findOne({
+          _id: new ObjectId(hiringRequestId),
+        });
+
+        if (!hiringRequest) {
+          return res.status(404).send({ message: "Hiring request not found" });
+        }
+        if (hiringRequest.userId !== userId) {
+          return res.status(403).send({ message: "Not authorized" });
+        }
+        if (hiringRequest.paymentStatus !== "paid") {
+          return res
+            .status(403)
+            .send({ message: "Only paid clients can leave a review" });
+        }
+
+        const newComment = {
+          hiringRequestId,
+          lawyerId,
+          userId,
+          userName,
+          comment,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+
+        const result = await commentCollection.insertOne(newComment);
+        res.status(201).send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+
+    // 2️⃣ একটা lawyer-এর সব comment (lawyer profile page-এ দেখানোর জন্য) — Read
+    app.get("/api/comments/lawyer/:lawyerId", async (req, res) => {
+      try {
+        const { lawyerId } = req.params;
+        const result = await commentCollection
+          .find({ lawyerId })
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+    // 3️⃣ Logged-in user-এর নিজের সব comment (/dashboard/user/comments) — Read
+    app.get("/api/comments/user/:userId", async (req, res) => {
+      try {
+        const { userId } = req.params;
+        const result = await commentCollection
+          .find({ userId })
+          .sort({ createdAt: -1 })
+          .toArray();
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: "Server error", error: error.message });
+      }
+    });
+    // 4️⃣ Comment আপডেট (Update)
+    // app.patch("/api/comments/:id", async (req, res) => {
+    //   try {
+    //     const { id } = req.params;
+    //     const { comment } = req.body;
+
+    //     const result = await commentCollection.updateOne(
+    //       { _id: new ObjectId(id) },
+    //       { $set: { comment, updatedAt: new Date() } },
+    //     );
+    //     res.send(result);
+    //   } catch (error) {
+    //     res.status(500).send({ message: "Server error", error: error.message });
+    //   }
+    // });
+
+    // // 5️⃣ Comment ডিলিট (Delete)
+    // app.delete("/api/comments/:id", async (req, res) => {
+    //   try {
+    //     const { id } = req.params;
+    //     const result = await commentCollection.deleteOne({
+    //       _id: new ObjectId(id),
+    //     });
+    //     res.send(result);
+    //   } catch (error) {
+    //     res.status(500).send({ message: "Server error", error: error.message });
+    //   }
+    // });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
