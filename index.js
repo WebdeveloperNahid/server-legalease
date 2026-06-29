@@ -39,6 +39,7 @@ async function run() {
     const hiringRequestCollection = database.collection("hiringRequests");
     const paymentCollection = database.collection("payments");
     const commentCollection = database.collection("comments");
+    const userCollection = database.collection("user");
 
     //for Home page to show 6 data use--> by fee (b-a) & limite (6) a
     app.get("/api/public/featured-lawyers", async (req, res) => {
@@ -247,6 +248,22 @@ async function run() {
           createdAt: new Date(),
         };
         const result = await paymentCollection.insertOne(paymentInfo);
+        //for Admin pay------>>>>
+
+        if (data.paymentType === "publishing") {
+          await userCollection.updateOne(
+            { email: data.email },
+            {
+              $set: {
+                publishingPaid: true,
+                publishingPaidAt: data.paidAt,
+                publishingTransactionId: result.insertedId.toString(),
+              },
+            },
+          );
+        }
+
+        //--------------------------------<<<<<
 
         //   — hiringRequest-এর status "paid" করা  Update method use kore
         if (data.hiringRequestId) {
@@ -267,6 +284,14 @@ async function run() {
         console.error("PAYMENT SAVE ERROR:", error);
         res.status(500).send({ message: "Server error", error: error.message });
       }
+    });
+
+    // OnerTiem publish Layer profile ---to pay Admin
+
+    app.get("/api/users/publishing-status", async (req, res) => {
+      const { email } = req.query;
+      const user = await userCollection.findOne({ email });
+      res.send({ publishingPaid: user?.publishingPaid || false });
     });
 
     // Comment section User /Client er
