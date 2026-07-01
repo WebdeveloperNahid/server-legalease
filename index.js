@@ -1,3 +1,4 @@
+console.log("🟢🟢🟢 SERVER FILE LOADED - VERSION CHECK 🟢🟢🟢");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -386,34 +387,42 @@ app.get("/api/comments/user/:userId", async (req, res) => {
     res.status(500).send({ message: "Server error", error: error.message });
   }
 });
+
+
 // 4️⃣ Comment আপডেট (Update)
-// app.patch("/api/comments/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const { comment } = req.body;
+app.patch("/api/comments/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { comment } = req.body;
 
-//     const result = await commentCollection.updateOne(
-//       { _id: new ObjectId(id) },
-//       { $set: { comment, updatedAt: new Date() } },
-//     );
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ message: "Server error", error: error.message });
-//   }
-// });
+    const result = await commentCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: { comment, updatedAt: new Date() } },
+    );
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
 
-// // 5️⃣ Comment ডিলিট (Delete)
-// app.delete("/api/comments/:id", async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     const result = await commentCollection.deleteOne({
-//       _id: new ObjectId(id),
-//     });
-//     res.send(result);
-//   } catch (error) {
-//     res.status(500).send({ message: "Server error", error: error.message });
-//   }
-// });
+// 5️⃣ Comment ডিলিট (Delete)
+app.delete("/api/comments/:id", async (req, res) => {
+
+  console.log("🔴 DELETE HIT, id:", req.params.id); // ← এটা যোগ করুন
+  try {
+    const { id } = req.params;
+    const result = await commentCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
+
+
+//For commint =======deployment Needed   @#&++///////
+
 
 // await client.db("admin").command({ ping: 1 });
 //     console.log(
