@@ -1,4 +1,3 @@
-console.log("🟢🟢🟢 SERVER FILE LOADED - VERSION CHECK 🟢🟢🟢");
 const express = require("express");
 const cors = require("cors");
 const app = express();
@@ -320,8 +319,6 @@ app.get("/api/users/publishing-status", async (req, res) => {
   res.send({ publishingPaid: user?.publishingPaid || false });
 });
 
-
-
 // Profile আপডেট (নাম + ছবি URL) — email দিয়ে user খুঁজে বের করা হয় (internal)
 app.patch("/api/users/profile", async (req, res) => {
   try {
@@ -337,7 +334,7 @@ app.patch("/api/users/profile", async (req, res) => {
 
     const result = await userCollection.updateOne(
       { email },
-      { $set: updateFields }
+      { $set: updateFields },
     );
 
     if (result.matchedCount === 0) {
@@ -418,7 +415,6 @@ app.get("/api/comments/user/:userId", async (req, res) => {
   }
 });
 
-
 // 4️⃣ Comment আপডেট (Update)
 app.patch("/api/comments/:id", async (req, res) => {
   try {
@@ -437,8 +433,6 @@ app.patch("/api/comments/:id", async (req, res) => {
 
 // 5️⃣ Comment ডিলিট (Delete)
 app.delete("/api/comments/:id", async (req, res) => {
-
-  console.log("🔴 DELETE HIT, id:", req.params.id); // ← এটা যোগ করুন
   try {
     const { id } = req.params;
     const result = await commentCollection.deleteOne({
@@ -450,13 +444,94 @@ app.delete("/api/comments/:id", async (req, res) => {
   }
 });
 
+// সব ইউজার লিস্ট আনার জন্য
+app.get("/api/users", async (req, res) => {
+  try {
+    const users = await userCollection
+      .find({}, { projection: { name: 1, email: 1, role: 1 } })
+      .toArray();
+    res.send(users);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
 
+// রোল পরিবর্তনের জন্য
+app.patch("/api/users/role", async (req, res) => {
+  try {
+    const { email, role } = req.body;
+    if (!email || !role) {
+      return res.status(400).send({ message: "Email and role are required" });
+    }
 
+    const result = await userCollection.updateOne(
+      { email },
+      { $set: { role, updatedAt: new Date() } },
+    );
 
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
+
+// ইউজার ডিলিটের জন্য
+app.delete("/api/users", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).send({ message: "Email is required" });
+    }
+
+    const result = await userCollection.deleteOne({ email });
+
+    if (result.deletedCount === 0) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
+
+//All TransactionCollection ==========..For Admin 
+
+app.get("/api/transactions", async (req, res) => {
+  const transactions = await paymentCollection
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+  res.send(transactions);
+});
+// Analytics Overview — Admin dashboard er jonno
+app.get("/api/analytics/overview", async (req, res) => {
+
+    const totalUsers = await userCollection.countDocuments({ role: "user" });
+    const totalLawyers = await userCollection.countDocuments({ role: "lawyer" });
+
+    const totalHires = await hiringRequestCollection.countDocuments({
+      paymentStatus: "paid",
+    });
+
+    const revenueResult = await paymentCollection
+      .aggregate([
+        { $group: { _id: null, total: { $sum: "$fee" } } },
+      ])
+      .toArray();
+
+    const totalRevenue = revenueResult[0]?.total || 0;
+
+    res.send({ totalUsers, totalLawyers, totalHires, totalRevenue });
+ 
+});
 
 
 //For commint =======deployment Needed   @#&++///////
-
 
 // await client.db("admin").command({ ping: 1 });
 //     console.log(
