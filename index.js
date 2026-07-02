@@ -320,6 +320,36 @@ app.get("/api/users/publishing-status", async (req, res) => {
   res.send({ publishingPaid: user?.publishingPaid || false });
 });
 
+
+
+// Profile আপডেট (নাম + ছবি URL) — email দিয়ে user খুঁজে বের করা হয় (internal)
+app.patch("/api/users/profile", async (req, res) => {
+  try {
+    const { email, name, image } = req.body;
+
+    if (!email) {
+      return res.status(400).send({ message: "Email is required" });
+    }
+
+    const updateFields = { updatedAt: new Date() };
+    if (name !== undefined) updateFields.name = name;
+    if (image !== undefined) updateFields.image = image;
+
+    const result = await userCollection.updateOne(
+      { email },
+      { $set: updateFields }
+    );
+
+    if (result.matchedCount === 0) {
+      return res.status(404).send({ message: "User not found" });
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: "Server error", error: error.message });
+  }
+});
+
 // Comment section User /Client er
 
 // 1️⃣ নতুন Comment তৈরি (Create) — hiring record check করে
@@ -419,6 +449,10 @@ app.delete("/api/comments/:id", async (req, res) => {
     res.status(500).send({ message: "Server error", error: error.message });
   }
 });
+
+
+
+
 
 
 //For commint =======deployment Needed   @#&++///////
